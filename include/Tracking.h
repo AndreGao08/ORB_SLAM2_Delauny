@@ -38,6 +38,8 @@
 #include "MapDrawer.h"
 #include "System.h"
 
+#include "Edge.h"
+#include "Delauny.h"
 #include <mutex>
 
 namespace ORB_SLAM2
@@ -49,6 +51,7 @@ class Map;
 class LocalMapping;
 class LoopClosing;
 class System;
+class Edge;
 
 class Tracking
 {  
@@ -74,6 +77,7 @@ public:
     // Use this function if you have deactivated local mapping and you only want to localize the camera.
     void InformOnlyTracking(const bool &flag);
 
+    void EdgeInit();
 
 public:
 

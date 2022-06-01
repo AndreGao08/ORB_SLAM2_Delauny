@@ -24,7 +24,8 @@
 #include "Tracking.h"
 #include "MapPoint.h"
 #include "Map.h"
-
+#include "Edge.h"
+#include "Delauny.h"
 #include<opencv2/core/core.hpp>
 #include<opencv2/features2d/features2d.hpp>
 
@@ -36,7 +37,7 @@ namespace ORB_SLAM2
 
 class Tracking;
 class Viewer;
-
+class Edge;
 class FrameDrawer
 {
 public:
@@ -47,6 +48,11 @@ public:
 
     // Draw last processed frame.
     cv::Mat DrawFrame();
+
+    //存储所有点关系
+    std::vector<std::vector<int>> mvPointRelations;
+    //存储所有边
+    std::vector<Edge> mvEdgeList;
 
 protected:
 

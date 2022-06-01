@@ -20,7 +20,7 @@
 
 
 #include "Tracking.h"
-
+#include <unistd.h>
 #include<opencv2/core/core.hpp>
 #include<opencv2/features2d/features2d.hpp>
 
@@ -33,6 +33,8 @@
 #include"Optimizer.h"
 #include"PnPsolver.h"
 
+#include "Edge.h"
+#include "Delauny.h"
 #include<iostream>
 
 #include<mutex>
@@ -262,6 +264,15 @@ cv::Mat Tracking::GrabImageMonocular(const cv::Mat &im, const double &timestamp)
     Track();
 
     return mCurrentFrame.mTcw.clone();
+}
+//初始化一个帧的边
+void Tracking::EdgeInit(){
+    Edge::pre_id=-1;
+    //subdiv初始化
+    cv::Rect rect(mCurrentFrame.mnMinX,mCurrentFrame.mnMinY,mCurrentFrame.mnMaxX-mCurrentFrame.mnMinX,mCurrentFrame.mnMaxY-mCurrentFrame.mnMinY);
+    mCurrentFrame.subdiv.initDelaunay(rect);
+    //创建edge
+    Delauny::UpdatePointRelation(rect,mCurrentFrame);
 }
 
 void Tracking::Track()
@@ -923,7 +934,7 @@ bool Tracking::TrackWithMotionModel()
         mbVO = nmatchesMap<10;
         return nmatches>20;
     }
-
+    EdgeInit();
     return nmatchesMap>=10;
 }
 

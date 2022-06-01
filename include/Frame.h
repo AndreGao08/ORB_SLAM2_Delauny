@@ -27,6 +27,7 @@
 #include "Thirdparty/DBoW2/DBoW2/BowVector.h"
 #include "Thirdparty/DBoW2/DBoW2/FeatureVector.h"
 #include "ORBVocabulary.h"
+#include "Edge.h"
 #include "KeyFrame.h"
 #include "ORBextractor.h"
 
@@ -39,7 +40,7 @@ namespace ORB_SLAM2
 
 class MapPoint;
 class KeyFrame;
-
+class Edge;
 class Frame
 {
 public:
@@ -99,6 +100,10 @@ public:
     cv::Mat UnprojectStereo(const int &i);
 
 public:
+    //subdiv
+    cv::Subdiv2D subdiv;
+    std::vector<std::vector<int>> mvPointRelations;
+    std::vector<Edge> mvEdgeList;
     // Vocabulary used for relocalization.
     ORBVocabulary* mpORBvocabulary;
 

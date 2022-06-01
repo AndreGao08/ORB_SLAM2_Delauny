@@ -42,6 +42,8 @@ cv::Mat FrameDrawer::DrawFrame()
     vector<int> vMatches; // Initialization: correspondeces with reference keypoints
     vector<cv::KeyPoint> vCurrentKeys; // KeyPoints in current frame
     vector<bool> vbVO, vbMap; // Tracked MapPoints in current frame
+    vector<Edge> vEdgeList;
+    vector<vector<int>> vPointRelations;
     int state; // Tracking state
 
     //Copy variables within scoped mutex
@@ -64,6 +66,8 @@ cv::Mat FrameDrawer::DrawFrame()
             vCurrentKeys = mvCurrentKeys;
             vbVO = mvbVO;
             vbMap = mvbMap;
+            vEdgeList = mvEdgeList;
+            vPointRelations = mvPointRelations;
         }
         else if(mState==Tracking::LOST)
         {
@@ -114,6 +118,16 @@ cv::Mat FrameDrawer::DrawFrame()
                     cv::rectangle(im,pt1,pt2,cv::Scalar(255,0,0));
                     cv::circle(im,vCurrentKeys[i].pt,2,cv::Scalar(255,0,0),-1);
                     mnTrackedVO++;
+                }
+            }
+        }//遍历所有特征点，把存在对应地图点的特征点画出来
+
+        //遍历所有边，把边画出来
+        if(!vPointRelations.empty() && !vEdgeList.empty()){
+            for(std::vector<Edge>::iterator edge_it=vEdgeList.begin();edge_it!=vEdgeList.end();edge_it++){
+                //确保这条直线的点有存在对应的地图点
+                if((vbVO[edge_it->key1_id] || vbMap[edge_it->key1_id]) && (vbVO[edge_it->key2_id] || vbMap[edge_it->key2_id])){
+                    cv::line(im,edge_it->keyPoint_1.pt,edge_it->keyPoint_2.pt,cv::Scalar(0,255,0),1,cv::LINE_AA,0);
                 }
             }
         }
@@ -173,6 +187,9 @@ void FrameDrawer::Update(Tracking *pTracker)
     mvbVO = vector<bool>(N,false);
     mvbMap = vector<bool>(N,false);
     mbOnlyTracking = pTracker->mbOnlyTracking;
+    //更新
+    mvEdgeList = pTracker->mCurrentFrame.mvEdgeList;
+    mvPointRelations = pTracker->mCurrentFrame.mvPointRelations;
 
 
     if(pTracker->mLastProcessedState==Tracking::NOT_INITIALIZED)

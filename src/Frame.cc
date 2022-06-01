@@ -19,6 +19,7 @@
 */
 
 #include "Frame.h"
+#include "Edge.h"
 #include "Converter.h"
 #include "ORBmatcher.h"
 #include <thread>
@@ -47,7 +48,8 @@ Frame::Frame(const Frame &frame)
      mpReferenceKF(frame.mpReferenceKF), mnScaleLevels(frame.mnScaleLevels),
      mfScaleFactor(frame.mfScaleFactor), mfLogScaleFactor(frame.mfLogScaleFactor),
      mvScaleFactors(frame.mvScaleFactors), mvInvScaleFactors(frame.mvInvScaleFactors),
-     mvLevelSigma2(frame.mvLevelSigma2), mvInvLevelSigma2(frame.mvInvLevelSigma2)
+     mvLevelSigma2(frame.mvLevelSigma2), mvInvLevelSigma2(frame.mvInvLevelSigma2),subdiv(frame.subdiv),
+     mvPointRelations(frame.mvPointRelations),mvEdgeList(frame.mvEdgeList)
 {
     for(int i=0;i<FRAME_GRID_COLS;i++)
         for(int j=0; j<FRAME_GRID_ROWS; j++)
@@ -139,7 +141,9 @@ Frame::Frame(const cv::Mat &imGray, const cv::Mat &imDepth, const double &timeSt
 
     if(mvKeys.empty())
         return;
-
+    //初始化
+    mvEdgeList.reserve(N*3);
+    mvPointRelations.resize(N,std::vector<int>(N,-1));
     UndistortKeyPoints();
 
     ComputeStereoFromRGBD(imDepth);
