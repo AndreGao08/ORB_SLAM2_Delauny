@@ -98,7 +98,7 @@ cv::Mat FrameDrawer::DrawFrame()
         const int n = vCurrentKeys.size();
         for(int i=0;i<n;i++)
         {
-            if(vbVO[i] || vbMap[i])
+            if((vbVO[i] || vbMap[i]))
             {
                 cv::Point2f pt1,pt2;
                 pt1.x=vCurrentKeys[i].pt.x-r;
@@ -121,16 +121,24 @@ cv::Mat FrameDrawer::DrawFrame()
                 }
             }
         }//遍历所有特征点，把存在对应地图点的特征点画出来
-
+        
         //遍历所有边，把边画出来
         if(!vPointRelations.empty() && !vEdgeList.empty()){
             for(std::vector<Edge>::iterator edge_it=vEdgeList.begin();edge_it!=vEdgeList.end();edge_it++){
                 //确保这条直线的点有存在对应的地图点
-                if((vbVO[edge_it->key1_id] || vbMap[edge_it->key1_id]) && (vbVO[edge_it->key2_id] || vbMap[edge_it->key2_id])){
-                    cv::line(im,edge_it->keyPoint_1.pt,edge_it->keyPoint_2.pt,cv::Scalar(0,255,0),1,cv::LINE_AA,0);
-                }
+                //if((vbVO[edge_it->key1_id] || vbMap[edge_it->key1_id]) && (vbVO[edge_it->key2_id] || vbMap[edge_it->key2_id])){
+                    if(edge_it->isOutlier)
+                    {
+                        cv::line(im,edge_it->keyPoint_1.pt,edge_it->keyPoint_2.pt,cv::Scalar(0,0,255),1,cv::LINE_AA,0);
+
+                    }else{
+                        cv::line(im,edge_it->keyPoint_1.pt,edge_it->keyPoint_2.pt,cv::Scalar(0,255,0),1,cv::LINE_AA,0);
+
+                    }
+                //}
             }
         }
+        
     }
 
     cv::Mat imWithInfo;

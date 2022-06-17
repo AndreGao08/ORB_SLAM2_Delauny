@@ -53,4 +53,8 @@ float Edge::get_edge_val(){
     }
 }
 
+void Edge::SetOutlier(){
+    this->isOutlier=true;
+}
+
 }

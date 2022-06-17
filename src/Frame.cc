@@ -117,10 +117,85 @@ Frame::Frame(const cv::Mat &imLeft, const cv::Mat &imRight, const double &timeSt
 
     AssignFeaturesToGrid();
 }
+//计算平均深度,使用一个高斯核函数
+void Frame::CalAverageDepth(){
+    float d,d1,d2,d3,d4,d6,d7,d8,d9;
+    for(int i=1;i<mImDepth.rows;i++){
+        for(int j = 1;j<mImDepth.cols;j++){
+            d = mImDepth.at<float>(i,j);
+            d1=mImDepth.at<float>(i-1,j-1);
+            d2=mImDepth.at<float>(i,j-1);
+            d3=mImDepth.at<float>(i+1,j-1);
+            d4=mImDepth.at<float>(i-1,j);
+            d6=mImDepth.at<float>(i+1,j);
+            d7=mImDepth.at<float>(i-1,j+1);
+            d8=mImDepth.at<float>(i,j+1);
+            d9=mImDepth.at<float>(i+1,j+1);
 
+            mvWeightD.at<float>(i,j)=(d1 + 2*d2 + d3 + 2*d4 + 4*d + 2*d6 + d7 + 2*d8 + d9)/16;
+        } 
+    }
+}
+
+//计算是深度的方差
+void Frame::CalVarDepth(){
+    for(int i=0;i<mImDepth.rows;i++){
+        for(int j=0;j<mImDepth.cols;j++){
+            float d = mImDepth.at<float>(i,j);
+            mvVarD.at<float>(i,j)= invfy*0.02*d*d;
+            mvVarD2.at<float>(i,j) = mvVarD.at<float>(i,j)*mvVarD.at<float>(i,j);
+        }
+    }
+}
+//计算每个特征点的深度的方差hat
+void Frame::CalVarDepthHat(){
+    int u,v;
+    float vWeightD2;
+    float vD2_1,vD2_2,vD2_3,vD2_4,vD2_5,vD2_6,vD2_7,vD2_8,vD2_9;
+    float vVarD2_1,vVarD2_2,vVarD2_3,vVarD2_4,vVarD2_5,vVarD2_6,vVarD2_7,vVarD2_8,vVarD2_9;
+    for(int i=0;i<N;i++){
+        u=mvKeys[i].pt.x;
+        v=mvKeys[i].pt.y;
+        //得到特帧点的深度的平方
+        vD2_1 = mImDepth2.at<float>(int(u)-1,int(v)-1);
+        vD2_2 = mImDepth2.at<float>(int(u),int(v)-1);
+        vD2_3 = mImDepth2.at<float>(int(u)+1,int(v)-1);
+        vD2_4 = mImDepth2.at<float>(int(u)-1,int(v));
+        vD2_5 = mImDepth2.at<float>(int(u),int(v));
+        vD2_6 = mImDepth2.at<float>(int(u)+1,int(v));
+        vD2_7 = mImDepth2.at<float>(int(u)-1,int(v)+1);
+        vD2_8 = mImDepth2.at<float>(int(u),int(v)+1);
+        vD2_9 = mImDepth2.at<float>(int(u)+1,int(v)+1);
+
+        vVarD2_1 = mvVarD2.at<float>(int(u)-1,int(v)-1);
+        vVarD2_2 = mvVarD2.at<float>(int(u),int(v)-1);
+        vVarD2_3 = mvVarD2.at<float>(int(u)+1,int(v)-1);
+        vVarD2_4 = mvVarD2.at<float>(int(u)-1,int(v));
+        vVarD2_5 = mvVarD2.at<float>(int(u),int(v));
+        vVarD2_6 = mvVarD2.at<float>(int(u)+1,int(v));
+        vVarD2_7 = mvVarD2.at<float>(int(u)-1,int(v)+1);
+        vVarD2_8 = mvVarD2.at<float>(int(u),int(v)+1);
+        vVarD2_9 = mvVarD2.at<float>(int(u)+1,int(v)+1);
+        //计算
+        mvVarD2_hat[i] = ((vVarD2_1+vD2_1)*1 + (vVarD2_2+vD2_2)*2 + (vVarD2_3+vD2_3)*1 + (vVarD2_4+vD2_4)*2 + (vVarD2_5+vD2_5)*4 + (vVarD2_6+vD2_6)*2 + (vVarD2_7+vD2_7)*1 + (vVarD2_8+vD2_8)*2 + (vVarD2_9+vD2_9)*1)/16;
+
+    }
+}
+
+//得到所有深度的平方
+void Frame::CalAllDepth2(){
+    for(int i=0;i<mImDepth.rows;i++){
+        for(int j=0;i<mImDepth.cols;j++){
+            float d = mImDepth.at<float>(j,i);
+            std::cout<<"深度值为"<<d<<std::endl;
+            mImDepth2.at<float>(j,i)=d*d;
+        }
+    }
+}
+//RGBD Frame初始化
 Frame::Frame(const cv::Mat &imGray, const cv::Mat &imDepth, const double &timeStamp, ORBextractor* extractor,ORBVocabulary* voc, cv::Mat &K, cv::Mat &distCoef, const float &bf, const float &thDepth)
     :mpORBvocabulary(voc),mpORBextractorLeft(extractor),mpORBextractorRight(static_cast<ORBextractor*>(NULL)),
-     mTimeStamp(timeStamp), mK(K.clone()),mDistCoef(distCoef.clone()), mbf(bf), mThDepth(thDepth)
+     mTimeStamp(timeStamp), mK(K.clone()),mDistCoef(distCoef.clone()), mbf(bf), mThDepth(thDepth),mImDepth(imDepth)
 {
     // Frame ID
     mnId=nNextId++;
@@ -147,6 +222,18 @@ Frame::Frame(const cv::Mat &imGray, const cv::Mat &imDepth, const double &timeSt
     UndistortKeyPoints();
 
     ComputeStereoFromRGBD(imDepth);
+    //存储所有点的深度值
+    //mImDepth2 = cv::Mat(mImDepth.rows,mImDepth.cols,CV_32F);
+    //计算所有深度值的平方
+    //CalAllDepth2();
+    //计算每个点深度的周围均值
+    //mvWeightD = imDepth.clone();
+    //CalAverageDepth();
+    //计算深度的方差
+    //mvVarD=cv::Mat(imDepth.rows,imDepth.cols,CV_32FC1);
+    //CalVarDepth();
+    //计算每个特征点的深度方差
+    //mvVarD2_hat = vector<float>(N,0);
 
     mvpMapPoints = vector<MapPoint*>(N,static_cast<MapPoint*>(NULL));
     mvbOutlier = vector<bool>(N,false);
@@ -646,8 +733,12 @@ void Frame::ComputeStereoMatches()
 
 void Frame::ComputeStereoFromRGBD(const cv::Mat &imDepth)
 {
+    /** 主要步骤如下:.对于彩色图像中的每一个特征点:<ul>  */
+    // mvDepth直接由depth图像读取`
+	//这里是初始化这两个存储“右图”匹配特征点横坐标和存储特征点深度值的vector
     mvuRight = vector<float>(N,-1);
     mvDepth = vector<float>(N,-1);
+    mvDepth2 = vector<float>(N,-1);
 
     for(int i=0; i<N; i++)
     {
@@ -659,9 +750,11 @@ void Frame::ComputeStereoFromRGBD(const cv::Mat &imDepth)
 
         const float d = imDepth.at<float>(v,u);
 
+
         if(d>0)
         {
             mvDepth[i] = d;
+            mvDepth2[i] = d*d;
             mvuRight[i] = kpU.pt.x-mbf/d;
         }
     }

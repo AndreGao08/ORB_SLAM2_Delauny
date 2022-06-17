@@ -882,9 +882,9 @@ bool Tracking::TrackWithMotionModel()
     // Update last frame pose according to its reference keyframe
     // Create "visual odometry" points if in Localization Mode
     UpdateLastFrame();
-
+    //cv::Mat initialPose;
     mCurrentFrame.SetPose(mVelocity*mLastFrame.mTcw);
-
+    //initialPose=mVelocity*mLastFrame.mTcw;
     fill(mCurrentFrame.mvpMapPoints.begin(),mCurrentFrame.mvpMapPoints.end(),static_cast<MapPoint*>(NULL));
 
     // Project points seen in previous frame
@@ -905,9 +905,93 @@ bool Tracking::TrackWithMotionModel()
     if(nmatches<20)
         return false;
 
+    
+    
     // Optimize frame pose with all matches
     Optimizer::PoseOptimization(&mCurrentFrame);
+    //初始化边
+    
+    EdgeInit();
+    
+    double max=0;
+    //边在世界坐标系下的长度
+    // step 1. 遍历所有的边，把存在对应地图点的边找出来
+    for(std::vector<Edge>::iterator edge_it=mCurrentFrame.mvEdgeList.begin();edge_it!=mCurrentFrame.mvEdgeList.end();edge_it++){
+        if(mCurrentFrame.mvpMapPoints[edge_it->key1_id] && mCurrentFrame.mvpMapPoints[edge_it->key2_id]){
+            //step1.1计算这条边在相机坐标系下的长度
+            float u_1 = edge_it->keyPoint_1.pt.x;
+            float v_1 = edge_it->keyPoint_1.pt.y;
 
+            float u_2 = edge_it->keyPoint_2.pt.x;
+            float v_2 = edge_it->keyPoint_2.pt.y;
+
+            MapPoint *Mpm_1 = mCurrentFrame.mvpMapPoints[edge_it->key1_id];
+            MapPoint *Mpm_2 = mCurrentFrame.mvpMapPoints[edge_it->key2_id];
+            float depth_1,depth_2;
+            float x_1,y_1,x_2,y_2;
+            depth_1 = mCurrentFrame.mvDepth[edge_it->key1_id];
+            depth_2 = mCurrentFrame.mvDepth[edge_it->key2_id];
+            //如果深度值很大，那么他的测量就不准
+            if(depth_1<3 && depth_2<3){
+                //计算相机坐标系下的坐标
+                x_1 = (u_1-mCurrentFrame.cx)*depth_1*mCurrentFrame.invfx;
+                y_1 = (v_1-mCurrentFrame.cy)*depth_1*mCurrentFrame.invfy;
+
+                x_2 = (u_2-mCurrentFrame.cx)*depth_2*mCurrentFrame.invfx;
+                y_2 = (v_2-mCurrentFrame.cy)*depth_2*mCurrentFrame.invfy;
+                //float length=sqrt((x_1-x_2)*(x_1-x_2)+(y_1-y_2)*(y_1-y_2)+(depth_1-depth_2)*(depth_1-depth_2));
+                std::vector<float> line={x_1-x_2,y_1-y_2,depth_1-depth_2};
+                //std::cout<<"KeyPoint1_ID:"<<edge_it->key1_id<<"  KeyPoint2_ID"<<edge_it->key2_id<<"       Length="<<length<<std::endl;
+
+                //step1.2将这两个对应的地图点投影到当前相机坐标系下
+                //投影
+                const cv::Mat Rcw = mCurrentFrame.mTcw.rowRange(0,3).colRange(0,3);
+                const cv::Mat tcw = mCurrentFrame.mTcw.rowRange(0,3).col(3);
+                //当前相机坐标系到世界坐标系的平移向量
+                const cv::Mat twc = -Rcw.t()*tcw;
+                /*
+                //上一帧的相机位姿
+                const cv::Mat Rlw = mLastFrame.mTcw.rowRange(0,3).colRange(0,3);
+                const cv::Mat tlw = mLastFrame.mTcw.rowRange(0,3).col(3);
+                //当前帧相对于上一帧相机的平移量
+                const cv::Mat tlc = Rlw*twc+tlw;
+                */
+                //MapPoint投影到当前相机坐标系
+                cv::Mat x3Dw_1 = Mpm_1->GetWorldPos();
+                cv::Mat x3Dc_1 = Rcw*x3Dw_1+tcw;
+                cv::Mat x3Dw_2 = Mpm_2->GetWorldPos();
+                cv::Mat x3Dc_2 = Rcw*x3Dw_2+tcw;
+                float xc_1 = x3Dc_1.at<float>(0);
+                float yc_1 = x3Dc_1.at<float>(1);
+                float invzc_1 = 1.0/x3Dc_1.at<float>(2);
+                float zc_1 = x3Dc_1.at<float>(2);
+
+                float xc_2 = x3Dc_2.at<float>(0);
+                float yc_2 = x3Dc_2.at<float>(1);
+                float invzc_2 = 1.0/x3Dc_2.at<float>(2);
+                float zc_2 = x3Dc_2.at<float>(2);
+
+
+                //把当前相机坐标系的点投影到当前图像坐标系(u,v)
+                //float pro_u_1 = mCurrentFrame.fx*xc_1*invzc_1+mCurrentFrame.cx;
+                //float pro_v_1 = mCurrentFrame.fy*yc_1*invzc_1+mCurrentFrame.cy;
+
+                //float pro_u_2 = mCurrentFrame.fx*xc_2*invzc_2+mCurrentFrame.cx;
+                //float pro_v_2 = mCurrentFrame.fy*yc_2*invzc_2+mCurrentFrame.cy;
+                //计算投影长度
+                //float pro_length = sqrt((xc_1-xc_2)*(xc_1-xc_2)+(yc_1-yc_2)*(yc_1-yc_2)+(zc_1-zc_2)*(zc_1-zc_2));
+                std::vector<float> pro_line={xc_1-xc_2,yc_1-yc_2,zc_1-zc_2};
+                std::vector<float> errorLine = {line[0]-pro_line[0],line[1]-pro_line[1],line[2]-pro_line[2]};
+
+                float error = sqrt(errorLine[0]*errorLine[0]+errorLine[1]*errorLine[1]+errorLine[2]*errorLine[2]);
+                //std::cout<<"projection_length is"<<pro_length<<std::endl;
+                //std::cout<<"projection error is "<<error<<std::endl;
+                if(error>3.7){edge_it->SetOutlier();}
+                if(error>max){max=error;}
+            }
+        }
+    }
+    std::cout<<"最大投影误差为"<<max<<std::endl;
     // Discard outliers
     int nmatchesMap = 0;
     for(int i =0; i<mCurrentFrame.N; i++)
@@ -934,7 +1018,7 @@ bool Tracking::TrackWithMotionModel()
         mbVO = nmatchesMap<10;
         return nmatches>20;
     }
-    EdgeInit();
+    
     return nmatchesMap>=10;
 }
 

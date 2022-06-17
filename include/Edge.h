@@ -29,6 +29,7 @@ class Edge{
         
         bool isOutlier;
         
+        void SetOutlier();
     private:
         //边的id
         int edge_id;

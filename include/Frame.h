@@ -98,8 +98,29 @@ public:
 
     // Backprojects a keypoint (if stereo/depth info available) into 3D world coordinates.
     cv::Mat UnprojectStereo(const int &i);
+    //计算平均深度
+    void CalAverageDepth();
+    //计算深度的方差
+    void CalVarDepth();
+    //计算深度的方差hat
+    void CalVarDepthHat();
+    //计算所有深度值的平方
+    void CalAllDepth2();
+
 
 public:
+    //w(dq)
+    //计算方法,平均深度
+    //W=1/16|1 2 1|
+    //      |2 4 2|
+    //      |1 2 1|
+    cv::Mat mvWeightD;
+    //深度值的方差
+    cv::Mat mvVarD;
+    cv::Mat mvVarD2;
+    std::vector<float> mvVarD2_hat;
+    cv::Mat mImDepth;
+    cv::Mat mImDepth2;
     //subdiv
     cv::Subdiv2D subdiv;
     std::vector<std::vector<int>> mvPointRelations;
@@ -146,6 +167,8 @@ public:
     // "Monocular" keypoints have a negative value.
     std::vector<float> mvuRight;
     std::vector<float> mvDepth;
+    //Depth的平方
+    std::vector<float> mvDepth2;
 
     // Bag of Words Vector structures.
     DBoW2::BowVector mBowVec;

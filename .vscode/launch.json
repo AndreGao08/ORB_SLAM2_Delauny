@@ -12,8 +12,8 @@
             "args": [
                 "/home/simulator/Documents/diy/Depth/ORB_SLAM2_Delauny/Vocabulary/ORBvoc.txt",
                 "/home/simulator/Documents/diy/Depth/ORB_SLAM2_Delauny/Examples/RGB-D/TUM3.yaml",
-                "/home/simulator/Documents/dataset/TUM/rgbd_dataset_freiburg2_desk_with_person",
-                "/home/simulator/Documents/dataset/TUM/rgbd_dataset_freiburg2_desk_with_person/associate.txt"
+                "/home/simulator/Documents/dataset/TUM/rgbd_dataset_freiburg3_walking_static",
+                "/home/simulator/Documents/dataset/TUM/rgbd_dataset_freiburg3_walking_static/associate.txt"
             ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",

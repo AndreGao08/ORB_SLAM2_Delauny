@@ -67,6 +67,7 @@ protected:
     int mnTracked, mnTrackedVO;
     vector<cv::KeyPoint> mvIniKeys;
     vector<int> mvIniMatches;
+    vector<bool> mvbOutlier; 
     int mState;
 
     Map* mpMap;
