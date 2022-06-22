@@ -98,8 +98,8 @@ public:
 
     // Backprojects a keypoint (if stereo/depth info available) into 3D world coordinates.
     cv::Mat UnprojectStereo(const int &i);
-    //计算平均深度
-    void CalAverageDepth();
+    //计算滑动窗口平均深度
+    void CalSlidWindowAverageDepth();
     //计算深度的方差
     void CalVarDepth();
     //计算深度的方差hat
@@ -116,8 +116,8 @@ public:
     //      |1 2 1|
     cv::Mat mvWeightD;
     //深度值的方差
-    cv::Mat mvVarD;
-    cv::Mat mvVarD2;
+    cv::Mat mImVarD;
+    cv::Mat mImVarD2;
     std::vector<float> mvVarD2_hat;
     cv::Mat mImDepth;
     cv::Mat mImDepth2;
